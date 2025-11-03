@@ -1,5 +1,6 @@
 package com.example.antiphishingapp.network
 
+import com.example.antiphishingapp.feature.model.AnalysisResponse
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
@@ -38,10 +39,10 @@ interface ApiService {
         @Path("token") token: String
     ): Call<ResponseBody>
 
-    // ✅ 멀티모달 분석 요청 (POST /process-request)
+    // ✅ 문서 분석 (POST /process-request)
     @Multipart
     @POST("process-request")
     fun processRequest(
         @Part file: MultipartBody.Part
-    ): Call<ResponseBody>
+    ): Call<AnalysisResponse> // ✅ 여기만 변경됨
 }
