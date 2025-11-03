@@ -1,4 +1,4 @@
-package com.example.antiphishingapp.feature
+package com.example.antiphishingapp.feature.model
 
 import android.content.Context
 import android.graphics.Bitmap

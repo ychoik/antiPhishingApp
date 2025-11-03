@@ -1,5 +1,5 @@
 // ui/theme/Theme.kt
-package com.example.antiphishingapp.ui.theme
+package com.example.antiphishingapp.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
