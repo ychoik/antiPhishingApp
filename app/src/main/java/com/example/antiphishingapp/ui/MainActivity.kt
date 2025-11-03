@@ -28,19 +28,19 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.example.antiphishingapp.ui.theme.AntiPhishingAppTheme
-import com.example.antiphishingapp.feature.StampDetector
-import com.example.antiphishingapp.feature.OcrService
+import com.example.antiphishingapp.theme.AntiPhishingAppTheme
 import com.example.antiphishingapp.feature.model.DetectionResult
-import com.example.antiphishingapp.network.RetrofitClient
-import com.example.antiphishingapp.network.UploadResponse
+import com.example.antiphishingapp.feature.model.OcrService
+import com.example.antiphishingapp.feature.model.StampDetector
+import com.example.antiphishingapp.network.ApiClient
 import com.example.antiphishingapp.utils.bitmapToMultipart
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
+import org.opencv.android.OpenCVLoader
+import org.opencv.core.Rect
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import org.opencv.android.OpenCVLoader
-import org.opencv.core.Rect
 import java.io.InputStream
 
 class MainActivity : ComponentActivity() {
@@ -55,12 +55,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // OpenCV 초기화
+        // ✅ OpenCV 초기화
         if (!OpenCVLoader.initDebug()) {
             Log.e("OpenCV", "OpenCV 초기화 실패")
         }
 
-        // 권한 요청
+        // ✅ 권한 요청
         checkImagePermission()
 
         setContent {
@@ -96,7 +96,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun PhishingDetectScreen() {
     var detectionResult by remember { mutableStateOf<DetectionResult?>(null) }
-    var ocrResult by remember { mutableStateOf<String>("") }
+    var ocrResult by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -112,34 +112,37 @@ fun PhishingDetectScreen() {
 
                 val bitmap = BitmapFactory.decodeStream(inputStream)
 
-                // (1) 서버 업로드
+                // ✅ (1) 서버 업로드
                 val part: MultipartBody.Part = bitmapToMultipart(bitmap)
-                RetrofitClient.instance.uploadImage(part).enqueue(object : Callback<UploadResponse> {
-                    override fun onResponse(call: Call<UploadResponse>, response: Response<UploadResponse>) {
+                val api = ApiClient.apiService
+
+                api.uploadImage(part).enqueue(object : Callback<ResponseBody> {
+                    override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
                         if (response.isSuccessful) {
-                            val body = response.body()
-                            Log.d("UPLOAD", "서버 업로드 성공: ${body?.url}")
-                            Toast.makeText(context, "업로드 성공: ${body?.url}", Toast.LENGTH_SHORT).show()
+                            val body = response.body()?.string()
+                            Log.d("UPLOAD", "서버 업로드 성공: $body")
+                            Toast.makeText(context, "업로드 성공", Toast.LENGTH_SHORT).show()
                         } else {
                             Log.e("UPLOAD", "서버 업로드 실패: ${response.code()}")
                             Toast.makeText(context, "업로드 실패: ${response.code()}", Toast.LENGTH_SHORT).show()
                         }
                     }
 
-                    override fun onFailure(call: Call<UploadResponse>, t: Throwable) {
+                    override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                         Log.e("UPLOAD", "서버 업로드 에러: ${t.message}")
                         Toast.makeText(context, "업로드 에러: ${t.message}", Toast.LENGTH_SHORT).show()
                     }
                 })
 
-                // (2) 로컬 스탬프 탐지
+                // ✅ (2) 로컬 스탬프 탐지
                 detectionResult = StampDetector.findStampRoi(bitmap, context)
 
-                // (3) 로컬 OCR
+                // ✅ (3) 로컬 OCR
                 OcrService.performOcr(bitmap) { result ->
                     ocrResult = result
                     Log.d("OCR_RESULT", result)
                 }
+
             } catch (e: SecurityException) {
                 Log.e("GALLERY", "권한 문제: ${e.message}")
                 Toast.makeText(context, "권한 문제: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -196,7 +199,7 @@ fun PhishingDetectScreen() {
 @Composable
 fun AnalyzedImageWithBoxes(
     bitmap: Bitmap,
-    boxes: List<Rect>,
+    boxes: List<org.opencv.core.Rect>,
     modifier: Modifier = Modifier
 ) {
     val originalWidth = bitmap.width.toFloat()

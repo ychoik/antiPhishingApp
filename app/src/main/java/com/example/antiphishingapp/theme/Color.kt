@@ -1,4 +1,4 @@
-package com.example.antiphishingapp.ui.theme
+package com.example.antiphishingapp.theme
 
 import androidx.compose.ui.graphics.Color
 

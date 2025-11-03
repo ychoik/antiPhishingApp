@@ -1,4 +1,4 @@
-package com.example.antiphishingapp.ui.theme
+package com.example.antiphishingapp.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
