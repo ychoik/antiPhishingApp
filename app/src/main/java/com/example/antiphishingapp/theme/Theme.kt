@@ -7,16 +7,18 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
+// Dark 색상 세트
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Primary700,    // Primary 색상: 좀 더 어두운 색상
+    secondary = Grayscale300, // Secondary 색상: 연한 그레이
+    tertiary = Grayscale500   // Tertiary 색상: 그레이 중간 색상
 )
 
+// Light 색상 세트
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = Primary700,    // Primary 색상: 좀 더 어두운 색상
+    secondary = Primary300,  // Secondary 색상: 연한 보라색
+    tertiary = Grayscale300   // Tertiary 색상: 그레이 중간 색상
 )
 
 @Composable
@@ -30,7 +32,7 @@ fun AntiPhishingAppTheme(
     }
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = AppTypography,  // Type.kt에서 Typography만 가져옴
         content = content
     )
 }
