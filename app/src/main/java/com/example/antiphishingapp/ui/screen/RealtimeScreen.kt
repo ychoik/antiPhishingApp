@@ -1,122 +1,109 @@
-package com.example.antiphishingapp.ui.screen
+package com.example.antiphishingapp.feature.screen
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.antiphishingapp.feature.model.RealtimeMessage
-import com.example.antiphishingapp.feature.realtime.RealtimeCallService
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.antiphishingapp.feature.viewmodel.RealtimeViewModel
+import com.example.antiphishingapp.feature.model.RealtimeMessage
+import com.example.antiphishingapp.ui.components.PhoneAlertCard
+import com.example.antiphishingapp.ui.components.MessageAlertCard
 
 @Composable
 fun RealtimeScreen(
-    viewModel: RealtimeViewModel = viewModel(),
-    modifier: Modifier = Modifier
+    viewModel: RealtimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    val context = LocalContext.current
-    val message by viewModel.latestMessage.collectAsState()
-    var isListening by remember { mutableStateOf(false) }
+    val latestMessage by viewModel.latestMessage.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.startSession()
+    }
 
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(16.dp)
     ) {
-        Text(
-            text = "📞 실시간 보이스피싱 탐지",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1565C0)
-        )
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                if (!isListening) {
-                    startRealtimeService(context)
-                    viewModel.startSession() // 세션 시작
-                } else {
-                    stopRealtimeService(context)
-                    viewModel.stopSession()  // 세션 종료
-                }
-                isListening = !isListening
-            },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isListening) Color(0xFFD32F2F) else Color(0xFF1976D2)
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(
-                text = if (isListening) "탐지 중지" else "탐지 시작",
-                color = Color.White
+        if (latestMessage?.kind == "state") {
+            PhoneAlertCard(
+                onStartDetect = {},
+                onDismiss = { viewModel.clear() }
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (message != null) {
-            RealtimeMessageCard(message!!)
-        } else {
+        if (latestMessage?.kind == "partial" || latestMessage?.kind == "final") {
             Text(
-                text = if (isListening) "서버와 연결 중..." else "탐지 준비 중입니다.",
-                color = Color.Gray
+                text = latestMessage?.text ?: "",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+        }
+
+        if (latestMessage?.kind == "risk") {
+            val immediate = latestMessage?.immediate
+            val level = immediate?.level ?: 0
+            val probability = immediate?.probability ?: 0.0
+
+            RiskAlertCard(
+                riskLevel = level,
+                probability = probability,
+                onDismiss = { viewModel.clear() }
+            )
+        }
+
+        if (latestMessage?.kind == "sms_alert") {
+            MessageAlertCard(
+                onCheckKeyword = {},
+                onDismiss = { viewModel.clear() }
             )
         }
     }
 }
 
 @Composable
-private fun RealtimeMessageCard(msg: RealtimeMessage) {
-    val bgColor = when (msg.type) {
-        "phishing_alert" -> Color(0xFFFFCDD2)
-        "transcription" -> Color(0xFFE3F2FD)
-        else -> Color(0xFFF5F5F5)
-    }
-
+fun RiskAlertCard(
+    riskLevel: Int,
+    probability: Double,
+    onDismiss: () -> Unit
+) {
     Card(
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFCEDEE)),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = bgColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            .padding(20.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            when (msg.type) {
-                "phishing_alert" -> {
-                    Text("⚠️ 위험 감지", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
-                    Text("위험 단어 감지: ${msg.alertMessage ?: "알 수 없음"}")
-                }
-                "transcription" -> {
-                    Text("🗣 인식된 음성", fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
-                    Text(msg.text ?: "(내용 없음)")
-                }
-                else -> {
-                    Text("📡 ${msg.type}", fontWeight = FontWeight.Bold)
-                    Text(msg.text ?: "(메시지 없음)")
-                }
+
+        Column(
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Text(
+                text = "⚠️ 보이스피싱 위험 감지",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.Red
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                text = "위험도: $riskLevel\n확률: ${"%.1f".format(probability)}%",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("알림 지우기", color = Color.Red)
             }
         }
     }
-}
-
-private fun startRealtimeService(context: Context) {
-    val intent = Intent(context, RealtimeCallService::class.java)
-    context.startForegroundService(intent)
-}
-
-private fun stopRealtimeService(context: Context) {
-    val intent = Intent(context, RealtimeCallService::class.java)
-    context.stopService(intent)
 }
