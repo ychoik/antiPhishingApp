@@ -193,7 +193,7 @@ private fun ActionCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    val cardColor = if (isPressed) Primary900 else Primary200
+    val cardColor = if (isPressed) Primary900 else Primary300
     val titleColor = if (isPressed) Primary300 else Primary900
     val descriptionColor = if (isPressed) Primary300 else Grayscale700
 
@@ -205,7 +205,7 @@ private fun ActionCard(
                 indication = null,
                 onClick = onClick
             ),
-        shape = RoundedCornerShape(15.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
