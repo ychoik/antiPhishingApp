@@ -92,14 +92,24 @@ private fun parseTime(timeString: String): LocalTime {
 @Composable
 fun CallListScreen() {
     var selectedOption by remember { mutableStateOf("최신순") }
+    var searchText by remember { mutableStateOf("") }
     var displayedRecords by remember { mutableStateOf(sampleCallRecords) }
 
-    LaunchedEffect(selectedOption) {
+    LaunchedEffect(selectedOption, searchText) {
+        val filteredList = if (searchText.isBlank()) {
+            sampleCallRecords
+        } else {
+            sampleCallRecords.filter { record ->
+                record.phoneNumber.contains(searchText, ignoreCase = true) ||
+                        record.logs.any { it.text.contains(searchText, ignoreCase = true) }
+            }
+        }
+
         displayedRecords = when (selectedOption) {
-            "최신순" -> sampleCallRecords.sortedByDescending { parseTime(it.callTime) }
-            "번호순" -> sampleCallRecords.sortedBy { it.phoneNumber }
-            "위험도순" -> sampleCallRecords // 정렬 미구현
-            else -> sampleCallRecords
+            "최신순" -> filteredList.sortedByDescending { parseTime(it.callTime) }
+            "번호순" -> filteredList.sortedBy { it.phoneNumber }
+            "위험도순" -> filteredList
+            else -> filteredList
         }
     }
 
@@ -110,7 +120,10 @@ fun CallListScreen() {
             .padding(start = 24.dp, end = 27.dp)
     ) {
         Spacer(modifier = Modifier.height(67.dp))
-        SearchBar()
+        SearchBar(
+            value = searchText,
+            onValueChange = { searchText = it }
+        )
         Spacer(modifier = Modifier.height(20.dp))
         FilterBar(
             selectedOption = selectedOption,
@@ -129,12 +142,10 @@ fun CallListScreen() {
 }
 
 @Composable
-private fun SearchBar() {
-    var text by remember { mutableStateOf("") }
-
+private fun SearchBar(value: String, onValueChange: (String) -> Unit) {
     BasicTextField(
-        value = text,
-        onValueChange = { text = it },
+        value = value,
+        onValueChange = onValueChange,
         modifier = Modifier
             .fillMaxWidth()
             .height(42.dp),
@@ -160,7 +171,7 @@ private fun SearchBar() {
                 Box(
                     modifier = Modifier.weight(1f)
                 ) {
-                    if (text.isEmpty()) {
+                    if (value.isEmpty()) {
                         Text(
                             text = "원하는 내역을 검색하세요.",
                             style = AppTypography.bodyLarge,
@@ -295,6 +306,7 @@ private fun SortDropdownMenu(
                                 .size(10.dp)
                                 .clickable {
                                     onOptionSelected(option)
+                                    isExpanded = false
                                 }
                         )
                     }
