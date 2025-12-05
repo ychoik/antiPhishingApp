@@ -2,11 +2,13 @@ package com.example.antiphishingapp.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,7 +38,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 // ------------------------------------
-// ViewModel 설정 (DB 연결용)
+// ViewModel 설정 (기존 코드 유지)
 // ------------------------------------
 class SmsListViewModel(database: AppDatabase) : ViewModel() {
     // DB의 데이터를 실시간으로 감시하는 Flow
@@ -56,9 +58,20 @@ class SmsListViewModelFactory(private val context: android.content.Context) : Vi
 fun SmsListScreen() {
     val context = LocalContext.current
     val viewModel: SmsListViewModel = viewModel(factory = SmsListViewModelFactory(context))
-
     // DB 데이터를 State로 변환 (데이터 변경 시 UI 자동 갱신)
     val smsList by viewModel.smsListFlow.collectAsState(initial = emptyList())
+
+    var selectedOption by remember { mutableStateOf("최신순") }
+    var displayedMessages by remember { mutableStateOf<List<SmsEntity>>(emptyList()) }
+
+    LaunchedEffect(smsList, selectedOption) {
+        displayedMessages = when (selectedOption) {
+            "최신순" -> smsList.sortedByDescending { it.receivedDate }
+            "번호순" -> smsList.sortedBy { it.sender }
+            "위험도순" -> smsList // 정렬 미구현
+            else -> smsList
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -69,13 +82,16 @@ fun SmsListScreen() {
         Spacer(modifier = Modifier.height(67.dp))
         SearchBar()
         Spacer(modifier = Modifier.height(20.dp))
-        FilterBar()
+        FilterBar(
+            selectedOption = selectedOption,
+            onOptionSelected = { selectedOption = it }
+        )
         Spacer(modifier = Modifier.height(10.dp))
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(smsList) { smsEntity ->
+            items(displayedMessages) { smsEntity ->
                 SmsCard(sms = smsEntity)
             }
         }
@@ -129,7 +145,10 @@ private fun SearchBar() {
 }
 
 @Composable
-private fun FilterBar() {
+private fun FilterBar(
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
     val filterTextStyle = TextStyle(
         fontFamily = Pretendard,
         fontWeight = FontWeight.SemiBold,
@@ -154,12 +173,41 @@ private fun FilterBar() {
             color = Color(0xFF757575)
         )
         Spacer(modifier = Modifier.weight(1f))
+
+        SortDropdownMenu(
+            selectedOption = selectedOption,
+            onOptionSelected = onOptionSelected
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+    }
+}
+
+@Composable
+private fun SortDropdownMenu(
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val sortOptions = listOf("최신순", "위험도순", "번호순")
+
+    val textStyle = TextStyle(
+        fontFamily = Pretendard,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp
+    )
+
+    Box {
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .width(80.dp)
+                .clickable { isExpanded = true },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End
         ) {
             Text(
-                text = "최신순",
-                style = filterTextStyle,
+                text = selectedOption,
+                style = textStyle,
                 color = Color(0xFF757575)
             )
             Spacer(modifier = Modifier.width(10.dp))
@@ -169,7 +217,57 @@ private fun FilterBar() {
                 modifier = Modifier.size(width = 9.dp, height = 6.dp),
                 colorFilter = ColorFilter.tint(Color(0xFFD9D9D9))
             )
-            Spacer(modifier = Modifier.width(16.dp))
+        }
+
+        DropdownMenu(
+            expanded = isExpanded,
+            onDismissRequest = { isExpanded = false },
+            modifier = Modifier
+                .width(92.dp)
+                .height(94.dp)
+                .background(
+                    color = Primary100,
+                    shape = RoundedCornerShape(10.dp)
+                )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Spacer(modifier = Modifier.height(6.dp))
+                sortOptions.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .clickable { onOptionSelected(option) },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val textColor = if (option == selectedOption) {
+                            Color(0xFF757575)
+                        } else {
+                            Color(0xFF9B9B9B)
+                        }
+
+                        Text(
+                            text = option,
+                            style = textStyle,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        val iconRes = if (option == selectedOption) {
+                            R.drawable.checked01
+                        } else {
+                            R.drawable.unchecked01
+                        }
+                        Image(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = "$option selection state",
+                            modifier = Modifier.size(10.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
         }
     }
 }
@@ -182,8 +280,7 @@ fun SmsCard(sms: SmsEntity) {
         fontSize = 16.sp
     )
 
-    // 날짜 변환 (Long -> String)
-    val dateFormat = SimpleDateFormat("a hh:mm", Locale.US) // 예: PM 10:30
+    val dateFormat = SimpleDateFormat("a hh:mm", Locale.US)
     val timeString = dateFormat.format(Date(sms.receivedDate))
 
     Row(
