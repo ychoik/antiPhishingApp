@@ -37,17 +37,14 @@ import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ------------------------------------
-// ViewModel 설정 (기존 코드 유지)
-// ------------------------------------
 class SmsListViewModel(database: AppDatabase) : ViewModel() {
-    // DB의 데이터를 실시간으로 감시하는 Flow
     val smsListFlow: Flow<List<SmsEntity>> = database.smsDao().getAllRiskySms()
 }
 
 class SmsListViewModelFactory(private val context: android.content.Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SmsListViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
             return SmsListViewModel(AppDatabase.getDatabase(context)) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
@@ -58,18 +55,27 @@ class SmsListViewModelFactory(private val context: android.content.Context) : Vi
 fun SmsListScreen() {
     val context = LocalContext.current
     val viewModel: SmsListViewModel = viewModel(factory = SmsListViewModelFactory(context))
-    // DB 데이터를 State로 변환 (데이터 변경 시 UI 자동 갱신)
     val smsList by viewModel.smsListFlow.collectAsState(initial = emptyList())
 
     var selectedOption by remember { mutableStateOf("최신순") }
+    var searchText by remember { mutableStateOf("") }
     var displayedMessages by remember { mutableStateOf<List<SmsEntity>>(emptyList()) }
 
-    LaunchedEffect(smsList, selectedOption) {
+    LaunchedEffect(smsList, selectedOption, searchText) {
+        val filteredList = if (searchText.isBlank()) {
+            smsList
+        } else {
+            smsList.filter { sms ->
+                sms.sender.contains(searchText, ignoreCase = true) ||
+                        sms.content.contains(searchText, ignoreCase = true)
+            }
+        }
+
         displayedMessages = when (selectedOption) {
-            "최신순" -> smsList.sortedByDescending { it.receivedDate }
-            "번호순" -> smsList.sortedBy { it.sender }
-            "위험도순" -> smsList // 정렬 미구현
-            else -> smsList
+            "최신순" -> filteredList.sortedByDescending { it.receivedDate }
+            "번호순" -> filteredList.sortedBy { it.sender }
+            "위험도순" -> filteredList // 정렬 미구현
+            else -> filteredList
         }
     }
 
@@ -80,7 +86,10 @@ fun SmsListScreen() {
             .padding(start = 24.dp, end = 27.dp)
     ) {
         Spacer(modifier = Modifier.height(67.dp))
-        SearchBar()
+        SearchBar(
+            value = searchText,
+            onValueChange = { searchText = it }
+        )
         Spacer(modifier = Modifier.height(20.dp))
         FilterBar(
             selectedOption = selectedOption,
@@ -99,12 +108,10 @@ fun SmsListScreen() {
 }
 
 @Composable
-private fun SearchBar() {
-    var text by remember { mutableStateOf("") }
-
+private fun SearchBar(value: String, onValueChange: (String) -> Unit) {
     BasicTextField(
-        value = text,
-        onValueChange = { text = it },
+        value = value,
+        onValueChange = onValueChange,
         modifier = Modifier
             .fillMaxWidth()
             .height(42.dp),
@@ -130,7 +137,7 @@ private fun SearchBar() {
                 Box(
                     modifier = Modifier.weight(1f)
                 ) {
-                    if (text.isEmpty()) {
+                    if (value.isEmpty()) {
                         Text(
                             text = "원하는 내역을 검색하세요.",
                             style = AppTypography.bodyLarge,
@@ -239,7 +246,10 @@ private fun SortDropdownMenu(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp)
-                            .clickable { onOptionSelected(option) },
+                            .clickable {
+                                onOptionSelected(option)
+                                isExpanded = false
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val textColor = if (option == selectedOption) {
