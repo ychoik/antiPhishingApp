@@ -2,11 +2,13 @@ package com.example.antiphishingapp.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,14 +27,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.antiphishingapp.R
 import com.example.antiphishingapp.theme.*
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-// 통화 기록의 각 대화 라인을 위한 데이터 클래스
 data class CallLog(
     val timestamp: String,
     val text: String
 )
 
-// 전체 통화 카드 하나를 위한 데이터 클래스
 data class CallRecord(
     val phoneNumber: String,
     val callTime: String,
@@ -50,43 +53,23 @@ private val phishingKeywords = listOf(
     "택배","배송","상품권","쿠폰","당첨","경품","무료","계좌","벌금","확인요망","확인하세요","조회","인증"
 )
 
-// 샘플 통화 데이터
 private val rawCallData = listOf(
     Triple("010-1234-5678", "PM 10:30", listOf(
         CallLog("00:00", "즉시 송금 요망. 확인 부탁드립니다."),
         CallLog("02:10", "계좌가 정지된 것으로 보여요.")
     )),
-    Triple("010-1234-5678", "PM 09:30", listOf(
+    Triple("010-8765-4321", "PM 09:30", listOf(
         CallLog("01:30", "우체부 등기가 도착했는데 혹시 지금 댁에 계실까요?"),
         CallLog("01:43", "특수범죄수사부 3팀 경감...")
     )),
-    Triple("010-1234-5678", "PM 08:12", listOf(
+    Triple("010-1111-2222", "AM 08:12", listOf(
         CallLog("23:14", "긴급한 건이라서요.")
     )),
-    Triple("010-1234-5678", "PM 04:55", listOf(
-        CallLog("04:20", "의심 계좌로 확인되어 연락드렸는데 시간 괜찮으실까요?")
-    )),
-    Triple("010-1234-5678", "PM 04:55", listOf(
-        CallLog("04:20", "의심 계좌로 확인되어 연락드렸는데 시간 괜찮으실까요?")
-    )),
-    Triple("010-1234-5678", "PM 04:55", listOf(
-        CallLog("04:20", "의심 계좌로 확인되어 연락드렸는데 시간 괜찮으실까요?")
-    )),
-    Triple("010-1234-5678", "PM 04:55", listOf(
-        CallLog("04:20", "의심 계좌로 확인되어 연락드렸는데 시간 괜찮으실까요?")
-    )),
-    Triple("010-1234-5678", "PM 04:55", listOf(
-        CallLog("04:20", "의심 계좌로 확인되어 연락드렸는데 시간 괜찮으실까요?")
-    )),
-    Triple("010-1234-5678", "PM 04:55", listOf(
-        CallLog("04:20", "의심 계좌로 확인되어 연락드렸는데 시간 괜찮으실까요?")
-    )),
-    Triple("010-1234-5678", "PM 04:55", listOf(
+    Triple("010-5555-4444", "PM 04:55", listOf(
         CallLog("04:20", "의심 계좌로 확인되어 연락드렸는데 시간 괜찮으실까요?")
     ))
 )
 
-// 샘플 데이터를 CallRecord 객체로 변환
 private val sampleCallRecords = rawCallData.map { (phone, time, logs) ->
     val fullContent = logs.joinToString(" ") { it.text }
     CallRecord(
@@ -97,8 +80,29 @@ private val sampleCallRecords = rawCallData.map { (phone, time, logs) ->
     )
 }
 
+private fun parseTime(timeString: String): LocalTime {
+    return try {
+        val formatter = DateTimeFormatter.ofPattern("a hh:mm", Locale.US)
+        LocalTime.parse(timeString, formatter)
+    } catch (e: Exception) {
+        LocalTime.MIN
+    }
+}
+
 @Composable
 fun CallListScreen() {
+    var selectedOption by remember { mutableStateOf("최신순") }
+    var displayedRecords by remember { mutableStateOf(sampleCallRecords) }
+
+    LaunchedEffect(selectedOption) {
+        displayedRecords = when (selectedOption) {
+            "최신순" -> sampleCallRecords.sortedByDescending { parseTime(it.callTime) }
+            "번호순" -> sampleCallRecords.sortedBy { it.phoneNumber }
+            "위험도순" -> sampleCallRecords // 정렬 미구현
+            else -> sampleCallRecords
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -108,13 +112,16 @@ fun CallListScreen() {
         Spacer(modifier = Modifier.height(67.dp))
         SearchBar()
         Spacer(modifier = Modifier.height(20.dp))
-        FilterBar()
+        FilterBar(
+            selectedOption = selectedOption,
+            onOptionSelected = { selectedOption = it }
+        )
         Spacer(modifier = Modifier.height(10.dp))
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(sampleCallRecords) { record ->
+            items(displayedRecords) { record ->
                 CallCard(record = record)
             }
         }
@@ -168,7 +175,10 @@ private fun SearchBar() {
 }
 
 @Composable
-private fun FilterBar() {
+private fun FilterBar(
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
     val filterTextStyle = TextStyle(
         fontFamily = Pretendard,
         fontWeight = FontWeight.SemiBold,
@@ -193,12 +203,41 @@ private fun FilterBar() {
             color = Color(0xFF757575)
         )
         Spacer(modifier = Modifier.weight(1f))
+
+        SortDropdownMenu(
+            selectedOption = selectedOption,
+            onOptionSelected = onOptionSelected
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+    }
+}
+
+@Composable
+private fun SortDropdownMenu(
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val sortOptions = listOf("최신순", "위험도순", "번호순")
+
+    val textStyle = TextStyle(
+        fontFamily = Pretendard,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp
+    )
+
+    Box {
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .width(80.dp)
+                .clickable { isExpanded = true },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End
         ) {
             Text(
-                text = "최신순",
-                style = filterTextStyle,
+                text = selectedOption,
+                style = textStyle,
                 color = Color(0xFF757575)
             )
             Spacer(modifier = Modifier.width(10.dp))
@@ -208,7 +247,60 @@ private fun FilterBar() {
                 modifier = Modifier.size(width = 9.dp, height = 6.dp),
                 colorFilter = ColorFilter.tint(Color(0xFFD9D9D9))
             )
-            Spacer(modifier = Modifier.width(16.dp))
+        }
+
+        DropdownMenu(
+            expanded = isExpanded,
+            onDismissRequest = { isExpanded = false },
+            modifier = Modifier
+                .width(92.dp)
+                .height(94.dp)
+                .background(
+                    color = Primary100,
+                    shape = RoundedCornerShape(10.dp)
+                )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Spacer(modifier = Modifier.height(6.dp))
+                sortOptions.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val textColor = if (option == selectedOption) {
+                            Color(0xFF757575)
+                        } else {
+                            Color(0xFF9B9B9B)
+                        }
+
+                        Text(
+                            text = option,
+                            style = textStyle,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        val iconRes = if (option == selectedOption) {
+                            R.drawable.checked01
+                        } else {
+                            R.drawable.unchecked01
+                        }
+                        Image(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = "$option selection state",
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clickable {
+                                    onOptionSelected(option)
+                                }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
         }
     }
 }
@@ -257,7 +349,6 @@ fun CallCard(record: CallRecord) {
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
-            // 각 대화 기록을 타임라인으로 표시
             Column {
                 record.logs.forEach { log ->
                     Row {
