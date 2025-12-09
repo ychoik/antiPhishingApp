@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        handleSocialLoginIntent(intent)
+
         // AuthRepository 초기화
         authRepository = AuthRepository(applicationContext)
 
@@ -183,12 +185,17 @@ class MainActivity : ComponentActivity() {
      */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
+        handleSocialLoginIntent(intent)
+    }
 
-        val uri: Uri? = intent.data
-
-        if (intent.action == Intent.ACTION_VIEW && uri != null) {
-            Log.d("SOCIAL_LOGIN", "Received callback URI: $uri")
-            SocialLoginCallbackHandler.handleUri(uri)
+    private fun handleSocialLoginIntent(intent: Intent?) {
+        val uri: Uri? = intent?.data
+        if (intent?.action == Intent.ACTION_VIEW && uri != null) {
+            if (uri.scheme == "antiphishing") {
+                Log.d("SOCIAL_LOGIN", "Received callback URI: $uri")
+                SocialLoginCallbackHandler.handleUri(uri)
+            }
         }
     }
 }
