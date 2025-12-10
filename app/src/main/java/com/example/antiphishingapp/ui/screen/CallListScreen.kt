@@ -205,7 +205,7 @@ private fun FilterBar(
             painter = painterResource(id = R.drawable.filter),
             contentDescription = "Filter Icon",
             modifier = Modifier.size(20.dp),
-            colorFilter = ColorFilter.tint(Grayscale900)
+            colorFilter = ColorFilter.tint(Color(0xFF757575))
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
