@@ -98,6 +98,7 @@ fun ImageUploadResultScreen(
                         Text(
                             text = "$forgeryScore%",
                             style = MaterialTheme.typography.displayMedium.copy(
+                                fontFamily = Pretendard,
                                 fontWeight = FontWeight.Bold,
                                 color = scoreColor
                             ),
@@ -347,7 +348,11 @@ fun InteractiveResultButton(text: String, onClick: () -> Unit) {
             .fillMaxWidth(0.9f)
             .height(52.dp)
     ) {
-        Icon(imageVector = Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
+        Icon(
+            painter = painterResource(id = R.drawable.mag),
+            contentDescription = "Search Icon",
+            modifier = Modifier.size(20.dp)
+        )
         Spacer(Modifier.width(8.dp))
         Text(text, fontWeight = FontWeight.Bold)
     }
