@@ -77,7 +77,7 @@ fun LoginScreen(
         if (loginSuccess) {
             authViewModel.reloadUser()
             navController.navigate("main") {
-                popUpTo("login") { inclusive = true }
+                popUpTo("title") { inclusive = true }
             }
         }
     }
