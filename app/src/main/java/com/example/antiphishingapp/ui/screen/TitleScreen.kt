@@ -71,27 +71,22 @@ fun TitleScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 상단 로고 영역
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center // 로고를 화면 상단~중간 영역의 중앙에 배치
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_savephishing_logo),
-                        contentDescription = "구해줘 피싱 로고",
-                        // 가로 너비에 맞춰 이미지를 꽉 채움 (비율 유지)
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier
-                            // 부모 컨테이너(화면) 너비의 80% 만큼 차지하도록 설정 (필요시 조절)
-                            .fillMaxWidth(0.8f)
-                            .padding(bottom = 60.dp)
-                    )
-                }
+
+                Spacer(modifier = Modifier.height(100.dp))
+
+                Image(
+                    painter = painterResource(id = R.drawable.ic_savephishing_logo),
+                    contentDescription = "구해줘 피싱 로고",
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .padding(bottom = 50.dp)
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
 
                 // 하단 버튼 그룹
                 Column(

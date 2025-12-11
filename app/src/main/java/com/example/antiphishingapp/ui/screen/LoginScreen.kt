@@ -97,9 +97,10 @@ fun LoginScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
+            Spacer(modifier = Modifier.height(100.dp))
 
             // 상단 로고 영역
             Image(
@@ -231,16 +232,5 @@ private fun LoginInputField(
             cursorColor = Primary900
         ),
         modifier = Modifier.fillMaxWidth()
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-
-    LoginScreen(
-        navController = rememberNavController(),
-        viewModel = viewModel(),
-        authViewModel = viewModel()
     )
 }
